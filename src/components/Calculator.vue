@@ -6,6 +6,9 @@
     
     <!-- Calculator Display (clickable to focus input) -->
     <div class="calculator-display" @click="focusExpressionInput">
+      <div class="previous-calculation" v-if="previousCalculation">
+        {{ previousCalculation }}
+      </div>
       <div class="display-screen">
         {{ displayValue || 'NIHIL' }}
       </div>
@@ -18,7 +21,6 @@
     <!-- Hidden Expression Input -->
     <input 
       ref="expressionInput"
-      v-model="currentExpression"
       @input="updateDisplay"
       @keydown="handleKeyDown"
       @blur="refocusAfterDelay"
@@ -50,6 +52,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { roundToTwelfths, toRomanFraction } from '../utils/romanFractions.js'
 import { parseExpression, isValidExpression as validateExpression } from '../utils/expressionParser.js'
+import { parseMixedInput, parseForKeyboard, isRomanChar } from '../utils/romanInput.js'
 import CalculationHistory from './CalculationHistory.vue'
 
 export default {
@@ -64,6 +67,7 @@ export default {
     const expressionInput = ref(null)
     const lastResult = ref(null)
     const justCalculated = ref(false)
+    const previousCalculation = ref('')
 
     // Convert mathematical expression to Roman numerals for display
     const convertExpressionToRoman = (expression) => {
@@ -103,18 +107,23 @@ export default {
 
     const isValidExpression = computed(() => {
       if (!currentExpression.value.trim()) return false
-      return validateExpression(currentExpression.value)
+      // Convert any Roman numerals to numbers for validation
+      const fullyConverted = parseMixedInput(currentExpression.value)
+      return validateExpression(fullyConverted)
     })
 
     const updateDisplay = (event) => {
-      // Filter input to only allow numbers, operators, and decimal points
       if (event && event.target) {
         const value = event.target.value
-        const filteredValue = value.replace(/[^0-9+\-*/^.]/g, '')
+        
+        // Filter input to allow numbers, operators, decimal points, and Roman numeral characters
+        const filteredValue = value.replace(/[^0-9+\-*/^.IVXLCDM]/gi, '')
+        
+        // Convert mixed Roman/Arabic input - preserve trailing sequences for building
+        const convertedValue = parseForKeyboard(filteredValue)
         
         // Prevent multiple decimals in a single number
-        // Split by operators but keep the operators
-        const tokens = filteredValue.split(/([+\-*/^])/)
+        const tokens = convertedValue.split(/([+\-*/^])/)
         const cleanedTokens = []
         
         for (let i = 0; i < tokens.length; i++) {
@@ -136,28 +145,38 @@ export default {
         
         const cleanValue = cleanedTokens.join('')
         
-        if (value !== cleanValue) {
-          event.target.value = cleanValue
-          currentExpression.value = cleanValue
-          return
+        // Update the input field with the filtered (but not converted) value
+        if (value !== filteredValue) {
+          event.target.value = filteredValue
+          // Re-trigger with the filtered value
+          if (filteredValue !== value) {
+            return updateDisplay({ target: { value: filteredValue } })
+          }
         }
         
         // Handle chaining calculations
-        if (justCalculated.value && filteredValue) {
-          const firstChar = filteredValue[0]
+        if (justCalculated.value && cleanValue) {
+          const firstChar = cleanValue[0]
           
           // If starting with an operator and we have a last result, continue the calculation
           if (/[+\-*/^]/.test(firstChar) && lastResult.value !== null) {
-            currentExpression.value = lastResult.value + filteredValue
+            currentExpression.value = lastResult.value + cleanValue
+            event.target.value = lastResult.value + filteredValue
           } else {
             // Starting with a number, start fresh calculation
-            currentExpression.value = filteredValue
+            currentExpression.value = cleanValue
+            event.target.value = filteredValue
             lastResult.value = null
+            previousCalculation.value = '' // Clear previous calculation when starting fresh
           }
           
           justCalculated.value = false
         } else {
-          currentExpression.value = filteredValue
+          currentExpression.value = cleanValue
+          // Keep the input field synced with the filtered value
+          if (event.target.value !== filteredValue) {
+            event.target.value = filteredValue
+          }
         }
       }
     }
@@ -197,11 +216,19 @@ export default {
       if (!isValidExpression.value) return
       
       try {
-        const result = parseExpression(currentExpression.value)
+        // Convert any remaining Roman numerals to numbers before calculating
+        const fullyConverted = parseMixedInput(currentExpression.value)
+        const result = parseExpression(fullyConverted)
         
         if (result !== null && !isNaN(result)) {
           // Round result to nearest 12th for Roman fraction system
           const roundedResult = roundToTwelfths(result)
+          
+          // Set previous calculation for display (in Roman numerals)
+          const romanExpression = convertExpressionToRoman(currentExpression.value)
+          const romanResult = toRomanFraction(Math.abs(roundedResult))
+          const sign = roundedResult < 0 ? '-' : ''
+          previousCalculation.value = `${romanExpression} = ${sign}${romanResult}`
           
           // Add to history
           const entry = {
@@ -215,6 +242,9 @@ export default {
           // Store result for chaining and clear expression
           lastResult.value = roundedResult
           currentExpression.value = ''
+          if (expressionInput.value) {
+            expressionInput.value.value = ''
+          }
           justCalculated.value = true
           
           focusExpressionInput()
@@ -227,15 +257,22 @@ export default {
 
     const clearCurrent = () => {
       currentExpression.value = ''
+      if (expressionInput.value) {
+        expressionInput.value.value = ''
+      }
       justCalculated.value = false
       focusExpressionInput()
     }
 
     const clearAll = () => {
       currentExpression.value = ''
+      if (expressionInput.value) {
+        expressionInput.value.value = ''
+      }
       calculationHistory.value = []
       lastResult.value = null
       justCalculated.value = false
+      previousCalculation.value = ''
       focusExpressionInput()
     }
 
@@ -283,10 +320,13 @@ export default {
             // Allow copy/paste
             return
           }
-          if (event.target === expressionInput.value && !currentExpression.value) {
+          // Only treat 'C' as a clear command if the expression is empty
+          // Otherwise let it be processed as Roman numeral input
+          if (!currentExpression.value) {
             event.preventDefault()
             clearCurrent()
           }
+          // If there's already content, let 'C' be processed as Roman numeral
           break
       }
     }
@@ -302,6 +342,7 @@ export default {
       expressionInput,
       displayValue,
       isValidExpression,
+      previousCalculation,
       updateDisplay,
       addToExpression,
       calculate,
@@ -397,6 +438,19 @@ export default {
 .calculator-display .validation-indicator.invalid {
   background: #dc3545;
   color: white;
+}
+
+.previous-calculation {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.75rem;
+  font-size: 0.8rem;
+  color: #888;
+  font-family: 'JetBrains Mono', monospace;
+  max-width: calc(100% - 3rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 

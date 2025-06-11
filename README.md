@@ -152,7 +152,7 @@ npm run build
    - Go to Settings > Pages in your repository
    - Select "Deploy from a branch"
    - Choose the `gh-pages` branch (created by GitHub Actions)
-   - Your app will be available at `https://your-username.github.io/calculatrix-romana/`
+   - Your app will be available at `https://dustinrjo.github.io/calculatrix-romana/`
 
 ### Manual Deployment
 The `dist` folder contains all production files and can be deployed to any static hosting service.
