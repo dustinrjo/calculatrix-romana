@@ -6,52 +6,44 @@
     
     <div class="calculator-display">
       <div class="display-screen">
-        <div class="previous-result" v-if="previousResult !== null">
-          <span class="roman-display">{{ formatNumber(previousResult) }}</span>
-          <span class="decimal-display">({{ Math.floor(previousResult) }})</span>
-        </div>
-        
-        <div class="current-input">
-          <input 
-            ref="displayInput"
-            v-model="displayValue" 
-            type="text" 
-            readonly
-            class="display-input"
-            placeholder="NIHIL"
-          />
-        </div>
+        {{ displayValue || 'NIHIL' }}
       </div>
     </div>
 
+    <!-- Expression Input -->
     <div class="input-section">
-      <div class="number-input">
-        <label>Numerus:</label>
+      <div class="expression-input-container">
+        <label>Expressio:</label>
         <input 
-          ref="numberInput"
-          v-model="currentInput" 
-          type="text" 
-          inputmode="numeric"
-          pattern="[0-9]*"
+          ref="expressionInput"
+          v-model="currentExpression"
           @input="updateDisplay"
-          placeholder="Scribe numerum..."
+          @keydown="handleKeyDown"
+          type="text"
+          placeholder="Scribe expressionem (e.g. 14+2*3-5/2)..."
+          class="expression-input"
+          autofocus
         />
+        <div class="validation-indicator" :class="{ valid: isValidExpression, invalid: currentExpression && !isValidExpression }">
+          <span v-if="isValidExpression">✓</span>
+          <span v-else-if="currentExpression && !isValidExpression">✗</span>
+        </div>
       </div>
     </div>
 
     <div class="calculator-buttons">
       <div class="button-row">
-        <button @click="selectOperation('^')" class="operator-btn" :class="{ active: pendingOperation === '^' }">^</button>
-        <button @click="selectOperation('/')" class="operator-btn" :class="{ active: pendingOperation === '/' }">÷</button>
-        <button @click="selectOperation('*')" class="operator-btn" :class="{ active: pendingOperation === '*' }">×</button>
-        <button @click="selectOperation('-')" class="operator-btn" :class="{ active: pendingOperation === '-' }">−</button>
+        <button @click="addToExpression('^')" class="operator-btn">^</button>
+        <button @click="addToExpression('/')" class="operator-btn">÷</button>
+        <button @click="addToExpression('*')" class="operator-btn">×</button>
+        <button @click="addToExpression('-')" class="operator-btn">−</button>
       </div>
       
       <div class="button-row">
-        <button @click="selectOperation('+')" class="operator-btn" :class="{ active: pendingOperation === '+' }">+</button>
+        <button @click="addToExpression('+')" class="operator-btn">+</button>
         <button @click="clearAll" class="clear-all-btn">AC</button>
         <button @click="clearCurrent" class="clear-btn">C</button>
-        <button @click="calculate" class="equals-btn">Computare</button>
+        <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
       </div>
     </div>
   </div>
@@ -59,9 +51,8 @@
 
 <script>
 import { ref, computed, onUnmounted } from 'vue'
-import { formatNumber } from '../utils/romanNumerals.js'
-import { createCalculationEntry, getOperatorSymbol } from '../utils/calculator.js'
 import { roundToTwelfths, toRomanFraction } from '../utils/romanFractions.js'
+import { parseExpression, isValidExpression as validateExpression } from '../utils/expressionParser.js'
 import CalculationHistory from './CalculationHistory.vue'
 
 export default {
@@ -71,185 +62,190 @@ export default {
   },
   setup() {
     // Calculator state
-    const currentInput = ref('')
-    const previousResult = ref(null)
-    const pendingOperation = ref('')
-    const operand1 = ref(null)
+    const currentExpression = ref('')
     const calculationHistory = ref([])
-    const displayInput = ref(null)
-    const numberInput = ref(null)
-    
-    // Calculator modes
-    const calculatorState = ref('input') // 'input', 'operation', 'result'
+    const expressionInput = ref(null)
+    const lastResult = ref(null)
+    const justCalculated = ref(false)
 
-    const displayValue = computed(() => {
-      if (pendingOperation.value && operand1.value !== null) {
-        // Show the operand and operation: "XIV +"
-        const operatorSymbol = getOperatorSymbol(pendingOperation.value)
-        const rounded = roundToTwelfths(operand1.value)
-        const sign = operand1.value < 0 ? '-' : ''
-        const romanValue = sign + toRomanFraction(Math.abs(rounded))
-        return `${romanValue} ${operatorSymbol}`
-      } else if (currentInput.value) {
-        const num = parseFloat(currentInput.value)
+    // Convert mathematical expression to Roman numerals for display
+    const convertExpressionToRoman = (expression) => {
+      if (!expression) return ''
+      
+      // Replace operators with Roman equivalents for display
+      let romanExpression = expression
+        .replace(/\+/g, '+')
+        .replace(/-/g, '−')
+        .replace(/\*/g, '×')
+        .replace(/\//g, '÷')
+        .replace(/\^/g, '^')
+      
+      // Convert numbers to Roman numerals
+      romanExpression = romanExpression.replace(/\d+\.?\d*/g, (match) => {
+        const num = parseFloat(match)
         if (!isNaN(num)) {
           const rounded = roundToTwelfths(num)
-          const sign = num < 0 ? '-' : ''
-          return sign + toRomanFraction(Math.abs(rounded))
+          return toRomanFraction(Math.abs(rounded))
         }
-      } else if (previousResult.value !== null) {
-        const rounded = roundToTwelfths(previousResult.value)
-        const sign = previousResult.value < 0 ? '-' : ''
+        return match
+      })
+      
+      return romanExpression
+    }
+
+    const displayValue = computed(() => {
+      // If we just calculated and have no new expression, show the last result
+      if (justCalculated.value && !currentExpression.value && lastResult.value !== null) {
+        const rounded = roundToTwelfths(lastResult.value)
+        const sign = lastResult.value < 0 ? '-' : ''
         return sign + toRomanFraction(Math.abs(rounded))
       }
-      return ''
+      
+      return convertExpressionToRoman(currentExpression.value)
+    })
+
+    const isValidExpression = computed(() => {
+      if (!currentExpression.value.trim()) return false
+      return validateExpression(currentExpression.value)
     })
 
     const updateDisplay = (event) => {
-      // Only allow numeric input (including decimals and negative numbers at start)
-      const value = event.target.value
-      const numericValue = value.replace(/[^0-9.-]/g, '')
-      
-      // Prevent multiple decimals
-      const parts = numericValue.split('.')
-      if (parts.length > 2) {
-        parts.splice(2)
-        event.target.value = parts.join('.')
-        currentInput.value = parts.join('.')
-        return
-      }
-      
-      // Only allow one negative sign at the beginning
-      const negativeCount = (numericValue.match(/-/g) || []).length
-      if (negativeCount > 1 || (negativeCount === 1 && !numericValue.startsWith('-'))) {
-        const cleanValue = negativeCount === 1 && numericValue.startsWith('-') 
-          ? '-' + numericValue.replace(/-/g, '')
-          : numericValue.replace(/-/g, '')
-        event.target.value = cleanValue
-        currentInput.value = cleanValue
-        return
-      }
-      
-      if (value !== numericValue) {
-        event.target.value = numericValue
-        currentInput.value = numericValue
+      // Filter input to only allow numbers, operators, and decimal points
+      if (event && event.target) {
+        const value = event.target.value
+        const filteredValue = value.replace(/[^0-9+\-*/^.]/g, '')
+        
+        // Prevent multiple decimals in a single number
+        // Split by operators but keep the operators
+        const tokens = filteredValue.split(/([+\-*/^])/)
+        const cleanedTokens = []
+        
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i]
+          if (/[+\-*/^]/.test(token)) {
+            // It's an operator, keep as is
+            cleanedTokens.push(token)
+          } else if (token) {
+            // It's a number, check for multiple decimals
+            const decimalCount = (token.match(/\./g) || []).length
+            if (decimalCount > 1) {
+              const firstDot = token.indexOf('.')
+              cleanedTokens.push(token.substring(0, firstDot + 1) + token.substring(firstDot + 1).replace(/\./g, ''))
+            } else {
+              cleanedTokens.push(token)
+            }
+          }
+        }
+        
+        const cleanValue = cleanedTokens.join('')
+        
+        if (value !== cleanValue) {
+          event.target.value = cleanValue
+          currentExpression.value = cleanValue
+          return
+        }
+        
+        // Handle chaining calculations
+        if (justCalculated.value && filteredValue) {
+          const firstChar = filteredValue[0]
+          
+          // If starting with an operator and we have a last result, continue the calculation
+          if (/[+\-*/^]/.test(firstChar) && lastResult.value !== null) {
+            currentExpression.value = lastResult.value + filteredValue
+          } else {
+            // Starting with a number, start fresh calculation
+            currentExpression.value = filteredValue
+            lastResult.value = null
+          }
+          
+          justCalculated.value = false
+        } else {
+          currentExpression.value = filteredValue
+        }
       }
     }
 
-    const selectOperation = (operation) => {
-      if (currentInput.value) {
-        // If we have current input, use it as operand1
-        const num = parseFloat(currentInput.value)
-        if (!isNaN(num)) {
-          operand1.value = num
-          pendingOperation.value = operation
-          previousResult.value = null // Clear previous result when setting new operation
-          currentInput.value = ''
-          calculatorState.value = 'operation'
-          focusNumberInput()
-        }
-      } else if (previousResult.value !== null) {
-        // Use previous result as operand1
-        operand1.value = previousResult.value
-        pendingOperation.value = operation
-        previousResult.value = null // Clear to show operation state
-        calculatorState.value = 'operation'
-        focusNumberInput()
+    const addToExpression = (operator) => {
+      // Convert display operators to actual operators
+      let actualOperator = operator
+      if (operator === '×') actualOperator = '*'
+      if (operator === '÷') actualOperator = '/'
+      if (operator === '−') actualOperator = '-'
+      
+      // If we just calculated, start chaining with the last result
+      if (justCalculated.value && lastResult.value !== null) {
+        currentExpression.value = lastResult.value + actualOperator
+        justCalculated.value = false
+        focusExpressionInput()
+        return
       }
+      
+      const expression = currentExpression.value
+      const lastChar = expression.slice(-1)
+      
+      // Don't add operator if expression is empty (except for minus sign)
+      if (!expression && actualOperator !== '-') return
+      
+      // Replace last operator if last character is an operator
+      if (expression && /[+\-*/^]/.test(lastChar)) {
+        currentExpression.value = expression.slice(0, -1) + actualOperator
+      } else {
+        currentExpression.value = expression + actualOperator
+      }
+      
+      focusExpressionInput()
     }
 
     const calculate = () => {
-      if (pendingOperation.value && operand1.value !== null && currentInput.value) {
-        const operand2 = parseFloat(currentInput.value)
-        if (isNaN(operand2)) return
-
-        let result = null
+      if (!isValidExpression.value) return
+      
+      try {
+        const result = parseExpression(currentExpression.value)
         
-        switch (pendingOperation.value) {
-          case '+':
-            result = operand1.value + operand2
-            break
-          case '-':
-            result = operand1.value - operand2
-            break
-          case '*':
-            result = operand1.value * operand2
-            break
-          case '/':
-            result = operand2 !== 0 ? operand1.value / operand2 : null
-            break
-          case '^':
-            result = Math.pow(operand1.value, operand2)
-            break
-        }
-
-        if (result !== null) {
+        if (result !== null && !isNaN(result)) {
           // Round result to nearest 12th for Roman fraction system
           const roundedResult = roundToTwelfths(result)
           
           // Add to history
-          const entry = createCalculationEntry(
-            operand1.value,
-            pendingOperation.value,
-            operand2,
-            roundedResult
-          )
+          const entry = {
+            expression: currentExpression.value,
+            result: roundedResult,
+            timestamp: Date.now()
+          }
           
           calculationHistory.value.unshift(entry)
           
-          // Update state
-          previousResult.value = roundedResult
-          currentInput.value = ''
-          operand1.value = null
-          pendingOperation.value = ''
-          calculatorState.value = 'result'
+          // Store result for chaining and clear expression
+          lastResult.value = roundedResult
+          currentExpression.value = ''
+          justCalculated.value = true
           
-          focusNumberInput()
+          focusExpressionInput()
         }
-      } else if (currentInput.value && !pendingOperation.value) {
-        // Just confirm the current input
-        const num = parseFloat(currentInput.value)
-        if (!isNaN(num)) {
-          previousResult.value = num
-          currentInput.value = ''
-          calculatorState.value = 'result'
-          focusNumberInput()
-        }
-      }
-    }
-
-    const handleEnter = () => {
-      if (pendingOperation.value && currentInput.value) {
-        calculate()
-      } else if (currentInput.value) {
-        const num = parseFloat(currentInput.value)
-        if (!isNaN(num)) {
-          previousResult.value = num
-          currentInput.value = ''
-          calculatorState.value = 'result'
-        }
+      } catch (error) {
+        console.error('Calculation error:', error)
+        // Could show error message to user here
       }
     }
 
     const clearCurrent = () => {
-      currentInput.value = ''
-      focusNumberInput()
+      currentExpression.value = ''
+      justCalculated.value = false
+      focusExpressionInput()
     }
 
     const clearAll = () => {
-      currentInput.value = ''
-      previousResult.value = null
-      pendingOperation.value = ''
-      operand1.value = null
-      calculatorState.value = 'input'
-      calculationHistory.value = [] // Clear history too
-      focusNumberInput()
+      currentExpression.value = ''
+      calculationHistory.value = []
+      lastResult.value = null
+      justCalculated.value = false
+      focusExpressionInput()
     }
 
-    const focusNumberInput = () => {
+    const focusExpressionInput = () => {
       setTimeout(() => {
-        if (numberInput.value) {
-          numberInput.value.focus()
+        if (expressionInput.value) {
+          expressionInput.value.focus()
         }
       }, 0)
     }
@@ -257,29 +253,19 @@ export default {
     // Keyboard event handler
     const handleKeyDown = (event) => {
       switch (event.key) {
-        case '+':
-        case '-':
-        case '*':
-        case '/':
-        case '^':
-          event.preventDefault()
-          selectOperation(event.key)
-          break
         case 'Enter':
         case '=':
           event.preventDefault()
-          if (pendingOperation.value && currentInput.value) {
+          if (isValidExpression.value) {
             calculate()
-          } else if (currentInput.value) {
-            handleEnter()
           }
           break
         case 'Escape':
           event.preventDefault()
           clearAll()
           break
-        case 'Backspace':
-          if (event.target === numberInput.value && currentInput.value === '') {
+        case 'Delete':
+          if (event.ctrlKey || event.metaKey) {
             event.preventDefault()
             clearCurrent()
           }
@@ -290,47 +276,31 @@ export default {
             // Allow copy/paste
             return
           }
-          event.preventDefault()
-          clearCurrent()
+          if (event.target === expressionInput.value && !currentExpression.value) {
+            event.preventDefault()
+            clearCurrent()
+          }
           break
       }
     }
 
-    // Add global keyboard listener
-    const addKeyboardListeners = () => {
-      document.addEventListener('keydown', handleKeyDown)
-    }
-
-    const removeKeyboardListeners = () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-
-    // Auto-focus on mount and add keyboard listeners
+    // Auto-focus on mount
     setTimeout(() => {
-      focusNumberInput()
-      addKeyboardListeners()
+      focusExpressionInput()
     }, 100)
 
-    // Cleanup on unmount
-    onUnmounted(() => {
-      removeKeyboardListeners()
-    })
-
     return {
-      currentInput,
-      previousResult,
-      pendingOperation,
+      currentExpression,
       calculationHistory,
-      displayInput,
-      numberInput,
+      expressionInput,
       displayValue,
+      isValidExpression,
       updateDisplay,
-      selectOperation,
+      addToExpression,
       calculate,
-      handleEnter,
       clearCurrent,
       clearAll,
-      formatNumber
+      handleKeyDown
     }
   }
 }
@@ -338,7 +308,7 @@ export default {
 
 <style scoped>
 .calculator {
-  max-width: 500px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 1.5rem;
   font-family: 'JetBrains Mono', monospace;
@@ -358,107 +328,85 @@ export default {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 2px solid #4A6741;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .display-screen {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 80px;
-}
-
-.previous-result {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  color: #888;
-  min-height: 24px;
-}
-
-.roman-display {
-  color: #B8860B;
-  font-weight: 600;
-}
-
-.decimal-display {
-  color: #888;
-  font-size: 0.8rem;
-}
-
-.current-input {
-  display: flex;
-  align-items: center;
-}
-
-.display-input {
-  background: transparent;
-  border: none;
-  outline: none;
   color: #fff;
   font-size: 1.8rem;
   font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  width: 100%;
-  text-align: right;
-}
-
-.display-input::placeholder {
-  color: #555;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.2;
+  max-width: 100%;
 }
 
 .input-section {
   margin-bottom: 1.5rem;
 }
 
-.number-input {
+.expression-input-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.number-input label {
-  font-size: 1rem;
-  color: #2D4A22;
+.expression-input-container label {
   font-weight: 600;
+  color: #2D4A22;
+  font-size: 0.9rem;
 }
 
-.number-input input {
-  padding: 1rem;
-  font-size: 1.2rem;
+.expression-input {
+  padding: 0.75rem;
   border: 2px solid #4A6741;
   border-radius: 6px;
-  background: #f8faf6;
+  font-size: 1rem;
   font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
+  background: #f8f9fa;
+  transition: border-color 0.2s;
 }
 
-.number-input input:focus {
+.expression-input:focus {
   outline: none;
   border-color: #2D4A22;
-  box-shadow: 0 0 8px rgba(45, 74, 34, 0.2);
+  background: #fff;
 }
 
-.number-input input::placeholder {
-  color: #999;
-  font-style: italic;
+.validation-indicator {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-top: 0.25rem;
 }
 
-/* Remove number input spinners */
-.number-input input::-webkit-outer-spin-button,
-.number-input input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.validation-indicator.valid {
+  background: #d4edda;
+  color: #155724;
 }
 
-.number-input input[type=text] {
-  -moz-appearance: textfield;
+.validation-indicator.invalid {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .calculator-buttons {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .button-row {
@@ -467,108 +415,117 @@ export default {
   gap: 0.75rem;
 }
 
-.calculator-buttons button {
-  padding: 1rem;
-  font-size: 1.1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  border: 2px solid;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 60px;
-}
-
-.clear-all-btn {
-  background: #EF4444;
-  color: white;
-  border-color: #EF4444;
-}
-
-.clear-all-btn:hover {
-  background: #DC2626;
-  border-color: #DC2626;
-}
-
-.clear-btn {
-  background: #F97316;
-  color: white;
-  border-color: #F97316;
-}
-
-.clear-btn:hover {
-  background: #EA580C;
-  border-color: #EA580C;
-}
-
 .operator-btn {
-  background: #3B82F6;
+  background: #4A6741;
   color: white;
-  border-color: #3B82F6;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .operator-btn:hover {
-  background: #2563EB;
-  border-color: #2563EB;
+  background: #5a7751;
+  transform: translateY(-1px);
 }
 
-.operator-btn.active {
-  background: #1D4ED8;
-  border-color: #1D4ED8;
-  box-shadow: 0 0 8px rgba(29, 78, 216, 0.4);
+.operator-btn:active {
+  transform: translateY(0);
+}
+
+.clear-all-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.clear-all-btn:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
+
+.clear-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.clear-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
 }
 
 .equals-btn {
-  background: #22C55E;
+  background: #28a745;
   color: white;
-  border-color: #22C55E;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.equals-btn:hover {
-  background: #16A34A;
-  border-color: #16A34A;
+.equals-btn:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
 }
 
-/* Calculator button special layouts */
-.button-row:last-child .equals-btn {
-  grid-column: span 1;
+.equals-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* Responsive design */
+.equals-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Mobile responsiveness */
 @media (max-width: 768px) {
   .calculator {
     padding: 1rem;
     max-width: 100%;
   }
   
-  .calculator-buttons button {
-    padding: 0.8rem;
-    font-size: 1rem;
-    min-height: 50px;
+  .title {
+    font-size: 1.5rem;
   }
   
-  .display-input {
-    font-size: 1.5rem;
+  .display-screen {
+    font-size: 1.4rem;
   }
   
   .button-row {
     gap: 0.5rem;
   }
   
-  .calculator-buttons {
-    gap: 0.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .display-input {
-    font-size: 1.2rem;
-  }
-  
-  .calculator-buttons button {
-    padding: 0.6rem;
-    font-size: 0.9rem;
-    min-height: 45px;
+  .operator-btn, 
+  .clear-all-btn, 
+  .clear-btn, 
+  .equals-btn {
+    padding: 0.75rem;
+    font-size: 1rem;
   }
 }
 </style> 

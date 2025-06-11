@@ -8,9 +8,7 @@
         class="history-entry"
         :class="{ latest: index === 0 }"
       >
-        <span class="operand">{{ formatFraction(entry.operand1) }}</span>
-        <span class="operator">{{ getOperatorSymbol(entry.operator) }}</span>
-        <span class="operand">{{ formatFraction(entry.operand2) }}</span>
+        <span class="expression">{{ convertExpressionToRoman(entry.expression) }}</span>
         <span class="equals">=</span>
         <span class="result">{{ formatFraction(entry.result) }}</span>
       </div>
@@ -19,8 +17,6 @@
 </template>
 
 <script>
-import { formatNumber } from '../utils/romanNumerals.js'
-import { getOperatorSymbol } from '../utils/calculator.js'
 import { toRomanFraction, roundToTwelfths } from '../utils/romanFractions.js'
 
 export default {
@@ -39,10 +35,33 @@ export default {
       return sign + toRomanFraction(Math.abs(rounded))
     }
 
+    const convertExpressionToRoman = (expression) => {
+      if (!expression) return ''
+      
+      // Replace operators with Roman equivalents for display
+      let romanExpression = expression
+        .replace(/\+/g, '+')
+        .replace(/-/g, '−')
+        .replace(/\*/g, '×')
+        .replace(/\//g, '÷')
+        .replace(/\^/g, '^')
+      
+      // Convert numbers to Roman numerals
+      romanExpression = romanExpression.replace(/\d+\.?\d*/g, (match) => {
+        const num = parseFloat(match)
+        if (!isNaN(num)) {
+          const rounded = roundToTwelfths(num)
+          return toRomanFraction(Math.abs(rounded))
+        }
+        return match
+      })
+      
+      return romanExpression
+    }
+
     return {
-      formatNumber,
       formatFraction,
-      getOperatorSymbol
+      convertExpressionToRoman
     }
   }
 }
@@ -95,15 +114,20 @@ export default {
   animation: highlightNew 1s ease-in-out;
 }
 
-.operand, .result {
+.expression, .result {
   font-weight: bold;
-  min-width: 40px;
   text-align: center;
 }
 
-.operator, .equals {
+.expression {
+  flex: 1;
+  word-break: break-all;
+}
+
+.equals {
   color: #A0522D;
   font-size: 1rem;
+  margin: 0 0.5rem;
 }
 
 .result {
