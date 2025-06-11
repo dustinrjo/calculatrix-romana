@@ -2,47 +2,44 @@
   <div class="calculator">
     <h1 class="title">Calculatrix Romana</h1>
     
-    <CalculationHistory :history="calculationHistory" />
+    <!-- <CalculationHistory :history="calculationHistory" /> -->
     
-    <div class="calculator-display">
+    <!-- Calculator Display (clickable to focus input) -->
+    <div class="calculator-display" @click="focusExpressionInput">
       <div class="display-screen">
         {{ displayValue || 'NIHIL' }}
       </div>
-    </div>
-
-    <!-- Expression Input -->
-    <div class="input-section">
-      <div class="expression-input-container">
-        <label>Expressio:</label>
-        <input 
-          ref="expressionInput"
-          v-model="currentExpression"
-          @input="updateDisplay"
-          @keydown="handleKeyDown"
-          type="text"
-          placeholder="Scribe expressionem (e.g. 14+2*3-5/2)..."
-          class="expression-input"
-          autofocus
-        />
-        <div class="validation-indicator" :class="{ valid: isValidExpression, invalid: currentExpression && !isValidExpression }">
-          <span v-if="isValidExpression">✓</span>
-          <span v-else-if="currentExpression && !isValidExpression">✗</span>
-        </div>
+      <div class="validation-indicator" :class="{ valid: isValidExpression, invalid: currentExpression && !isValidExpression }">
+        <span v-if="isValidExpression">✓</span>
+        <span v-else-if="currentExpression && !isValidExpression">✗</span>
       </div>
     </div>
+
+    <!-- Hidden Expression Input -->
+    <input 
+      ref="expressionInput"
+      v-model="currentExpression"
+      @input="updateDisplay"
+      @keydown="handleKeyDown"
+      @blur="refocusAfterDelay"
+      type="text"
+      class="hidden-input"
+      autocomplete="off"
+      autofocus
+    />
 
     <div class="calculator-buttons">
       <div class="button-row">
+        <button @click="clearAll" class="clear-all-btn">AC</button>
+        <button @click="clearCurrent" class="clear-btn">C</button>
         <button @click="addToExpression('^')" class="operator-btn">^</button>
         <button @click="addToExpression('/')" class="operator-btn">÷</button>
-        <button @click="addToExpression('*')" class="operator-btn">×</button>
-        <button @click="addToExpression('-')" class="operator-btn">−</button>
       </div>
       
       <div class="button-row">
+        <button @click="addToExpression('*')" class="operator-btn">×</button>
+        <button @click="addToExpression('-')" class="operator-btn">−</button>
         <button @click="addToExpression('+')" class="operator-btn">+</button>
-        <button @click="clearAll" class="clear-all-btn">AC</button>
-        <button @click="clearCurrent" class="clear-btn">C</button>
         <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
       </div>
     </div>
@@ -50,7 +47,7 @@
 </template>
 
 <script>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { roundToTwelfths, toRomanFraction } from '../utils/romanFractions.js'
 import { parseExpression, isValidExpression as validateExpression } from '../utils/expressionParser.js'
 import CalculationHistory from './CalculationHistory.vue'
@@ -250,6 +247,16 @@ export default {
       }, 0)
     }
 
+    const refocusAfterDelay = () => {
+      // Refocus the input after a short delay if it loses focus
+      // This ensures the user can always type without clicking
+      setTimeout(() => {
+        if (expressionInput.value && document.activeElement !== expressionInput.value) {
+          expressionInput.value.focus()
+        }
+      }, 100)
+    }
+
     // Keyboard event handler
     const handleKeyDown = (event) => {
       switch (event.key) {
@@ -285,9 +292,9 @@ export default {
     }
 
     // Auto-focus on mount
-    setTimeout(() => {
+    onMounted(() => {
       focusExpressionInput()
-    }, 100)
+    })
 
     return {
       currentExpression,
@@ -300,7 +307,9 @@ export default {
       calculate,
       clearCurrent,
       clearAll,
-      handleKeyDown
+      handleKeyDown,
+      focusExpressionInput,
+      refocusAfterDelay
     }
   }
 }
@@ -332,6 +341,18 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  cursor: text;
+  transition: border-color 0.2s;
+}
+
+.calculator-display:hover {
+  border-color: #5a7751;
+}
+
+.calculator-display:focus-within {
+  border-color: #2D4A22;
+  box-shadow: 0 0 8px rgba(45, 74, 34, 0.3);
 }
 
 .display-screen {
@@ -342,46 +363,22 @@ export default {
   word-break: break-all;
   line-height: 1.2;
   max-width: 100%;
+  flex: 1;
 }
 
-.input-section {
-  margin-bottom: 1.5rem;
-}
-
-.expression-input-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.expression-input-container label {
-  font-weight: 600;
-  color: #2D4A22;
-  font-size: 0.9rem;
-}
-
-.expression-input {
-  padding: 0.75rem;
-  border: 2px solid #4A6741;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-family: 'JetBrains Mono', monospace;
-  background: #f8f9fa;
-  transition: border-color 0.2s;
-}
-
-.expression-input:focus {
-  outline: none;
-  border-color: #2D4A22;
-  background: #fff;
-}
-
-.validation-indicator {
+.hidden-input {
   position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.calculator-display .validation-indicator {
+  position: absolute;
+  top: 0.75rem;
   right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -390,18 +387,19 @@ export default {
   justify-content: center;
   font-size: 0.8rem;
   font-weight: bold;
-  margin-top: 0.25rem;
 }
 
-.validation-indicator.valid {
-  background: #d4edda;
-  color: #155724;
+.calculator-display .validation-indicator.valid {
+  background: #28a745;
+  color: white;
 }
 
-.validation-indicator.invalid {
-  background: #f8d7da;
-  color: #721c24;
+.calculator-display .validation-indicator.invalid {
+  background: #dc3545;
+  color: white;
 }
+
+
 
 .calculator-buttons {
   display: flex;
