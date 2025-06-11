@@ -1,0 +1,38 @@
+                                    YOLOv3.2 LICENSE
+                                    ----------------------
+    You Only Live Once Public License with Specified Exceptions
+                                  Version 3.2, February 2024
+                    Copyright (c) 2024
+
+THIS LICENSE IS IN ALL CAPS, BECAUSE WE'RE SERIOUS. LIKE, REALLY SERIOUS, EXREMELY SERIOUS, SERIOUSLY SERIOUS.
+HERE'S THE DEAL, THE SOFTWARE IS YOURS TO DO WHATEVER YOU WANT WITH IT, PROVIDED THAT SOMETHING YOU DO WITH IT
+DOES NOT REQUIRE ANY GUARANTEES OR INDEMNIFICATION.  IF SOMETHING BAD HAPPENS, YOU OWE THIS DISTRIBUTOR FOR THE
+COST OF ALL DAMAGES PERSUANT TO THE FIRST CLAUSE.  ASIDE FROM THIS, AN ONBUDSMAN CAN NULLIFY THE CONTRACT OR 
+SUBSEQUENTLY PREPOSITION THIS AS MOOT.  
+
+BUT WE'LL BE STRAIGHT UP WITH YOU, IT'S PROVIDED "AS IS", NO GUARANTEES, NO WARRANTIES, NO BATTERIES, NOTHING!
+WE CAN'T GUARANTEE THAT IT WILL WORK PROPERLY, THAT IT WON'T BURN DOWN YOUR HOUSE OR THAT IT WON'T CAUSE ANOTHER NUCLEAR DISASTER.
+IF YOU CHOOSE TO USE IT, YOU'RE DOING IT AT YOUR OWN RISK! 
+ALSO, WE HOPE YOU'VE GOT A LITTLE COMMON SENSE LEFT IN THAT BRAIN OF YOURS TO RESPECT COPYRIGHT LAWS.
+WE'RE SURE YOU ALREADY KNOW THE DRILL, SO WE WON'T BORE YOU WITH ALL THE STUPID LEGAL JARGON LIKE
+LIABILITY, CONTRACT, TORT, CLAIMS, RESTRICTION, AND MERCHANTABILITY YADAYADAYADA WHOOO CARES. 
+NOW THAT WE'VE CLEARED THAT UP, AND I'VE MADE YOU LOST 10 MINUTES TRYING TO UNDERSTAND WHAT YOU JUST READ,
+WITHOUT FURTHER INTERRUPTION, HERE'S THE ACTUAL LICENSE YOU SHOULD PROBABLY READ, BUT WE BET YOU WON'T:
+
+0. This god forsaken project is in the public domain, EVEN IF NOBODY ASKED FOR IT.
+  0. - Unless you're listed in the exceptions below. GO CHECK NOW.
+1. Do whatever you want with it. WE JUST DON'T CARE.
+  0. - Again, unless you're listed in the exceptions below. I KNOW WHO YOU ARE.
+3. If you ever make any useful modifications to this project, please let us know. 
+3. Have fun and enjoy using the software!
+  0. - UNLESS YOU'RE LISTED IN THE EXCEPTIONS BELOW, THEN I HOPE YOU SUFFER AS MUCH AS I DID WRITING THIS CODE.
+6. A copy of this license should always be included with the project. LET OTHERS DISCOVER THE JOY OF Specified EXceptions! 
+7. In the case this license is not "legally binding" or whatever Saul Goodman in the courtroom just said,
+   this work should be considered Licensed under the CC0 <https://creativecommons.org/publicdomain/zero/1.0/legalcode>.
+  0. - UNLESS YOU ARE IN THE EXCEPTIONS, THEN I KEEP ALL THE RIGHTS TO THIS WORK. ALL OF THEM.
+
+EXCEPTIONS TO THIS LICENSE:
+---------------------------
+
+There are no exceptions other than the following:
+1. Jo Bro

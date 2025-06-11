@@ -200,7 +200,7 @@ We welcome contributions to improve Calculatrix Romana! Here's how you can help:
 
 ## License
 
-MIT License - see the [LICENSE](LICENSE) file for details.
+This software is distributed uner the Modified YOLOv3 [LICENSE](LICENSE.md) file for details.
 
 ## Acknowledgments
 
