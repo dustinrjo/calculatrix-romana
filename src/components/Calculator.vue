@@ -17,69 +17,69 @@
         <span v-else-if="currentExpression && !isValidExpression">✗</span>
       </div>
     </div>
-
+    
     <!-- Hidden Expression Input -->
     <input 
-      ref="expressionInput"
-      @input="updateDisplay"
-      @keydown="handleKeyDown"
-      @blur="refocusAfterDelay"
-      type="text"
-      class="hidden-input"
-      autocomplete="off"
-      autofocus
-      />
+    ref="expressionInput"
+    @input="updateDisplay"
+    @keydown="handleKeyDown"
+    @blur="refocusAfterDelay"
+    type="text"
+    class="hidden-input"
+    autocomplete="off"
+    autofocus
+    />
+    
+    <div class="calculator-buttons">
+      <!-- Control and Operator Buttons -->
+      <div class="button-row control-row">
+        <button @click="clearAll" class="clear-all-btn">AC</button>
+        <button @click="clearCurrent" class="clear-btn">C</button>
+        <button @click="copyToClipboard" class="copy-btn" :disabled="!canCopy" title="Copia ad Clipboard">📋 Copia</button>
+      </div>
       
-      <div class="calculator-buttons">
-        <!-- Control and Operator Buttons -->
-        <div class="button-row control-row">
-          <button @click="clearAll" class="clear-all-btn">AC</button>
-          <button @click="clearCurrent" class="clear-btn">C</button>
-          <button @click="copyToClipboard" class="copy-btn" :disabled="!canCopy" title="Copia ad Clipboard">
-            📋 Copia
-          </button>
-          <button @click="addToExpression('^')" class="operator-btn">^</button>
-        </div>
-        
-        <!-- Large Roman Numerals -->
-        <div class="button-row roman-numerals-row">
-          <button @click="addRomanNumeral('M')" class="roman-btn" :disabled="!romanButtonStates.M">M</button>
-          <button @click="addRomanNumeral('D')" class="roman-btn" :disabled="!romanButtonStates.D">D</button>
-          <button @click="addRomanNumeral('C')" class="roman-btn" :disabled="!romanButtonStates.C">C</button>
-          <button @click="addRomanNumeral('L')" class="roman-btn" :disabled="!romanButtonStates.L">L</button>
-        </div>
-        
-        <!-- Ten to One Roman Numerals -->
-        <div class="button-row roman-numerals-row">
-          <button @click="addRomanNumeral('VII')" class="roman-btn" :disabled="!romanButtonStates.VII">VII</button>
-          <button @click="addRomanNumeral('VIII')" class="roman-btn" :disabled="!romanButtonStates.VIII">VIII</button>
-          <button @click="addRomanNumeral('IX')" class="roman-btn" :disabled="!romanButtonStates.IX">IX</button>
-          <button @click="addRomanNumeral('X')" class="roman-btn" :disabled="!romanButtonStates.X">X</button>
-        </div>
-        
-        <div class="button-row roman-numerals-row">
-          <button @click="addRomanNumeral('IV')" class="roman-btn" :disabled="!romanButtonStates.IV">IV</button>
-          <button @click="addRomanNumeral('V')" class="roman-btn" :disabled="!romanButtonStates.V">V</button>
-          <button @click="addRomanNumeral('VI')" class="roman-btn" :disabled="!romanButtonStates.VI">VI</button>
-          <button @click="addToExpression('+')" class="operator-btn">+</button>
-        </div>
-        
-        <div class="button-row roman-numerals-row">
-          <button @click="addRomanNumeral('I')" class="roman-btn" :disabled="!romanButtonStates.I">I</button>
-          <button @click="addRomanNumeral('II')" class="roman-btn" :disabled="!romanButtonStates.II">II</button>
-          <button @click="addRomanNumeral('III')" class="roman-btn" :disabled="!romanButtonStates.III">III</button>
-          <button @click="addToExpression('-')" class="operator-btn">−</button>
+      <!-- Large Roman Numerals -->
+      <div class="button-row roman-numerals-row">
+        <button @click="addRomanNumeral('M')" class="roman-btn" :disabled="!romanButtonStates.M">M</button>
+        <button @click="addRomanNumeral('D')" class="roman-btn" :disabled="!romanButtonStates.D">D</button>
+        <button @click="addRomanNumeral('C')" class="roman-btn" :disabled="!romanButtonStates.C">C</button>
+        <button @click="addRomanNumeral('L')" class="roman-btn" :disabled="!romanButtonStates.L">L</button>
+      </div>
+      
+      <!-- Ten to One Roman Numerals -->
+      <div class="button-row roman-numerals-row">
+        <button @click="addRomanNumeral('VII')" class="roman-btn" :disabled="!romanButtonStates.VII">VII</button>
+        <button @click="addRomanNumeral('VIII')" class="roman-btn" :disabled="!romanButtonStates.VIII">VIII</button>
+        <button @click="addRomanNumeral('IX')" class="roman-btn" :disabled="!romanButtonStates.IX">IX</button>
+        <button @click="addRomanNumeral('X')" class="roman-btn" :disabled="!romanButtonStates.X">X</button>
+      </div>
+      
+      <div class="button-row roman-numerals-row">
+        <button @click="addRomanNumeral('IV')" class="roman-btn" :disabled="!romanButtonStates.IV">IV</button>
+        <button @click="addRomanNumeral('V')" class="roman-btn" :disabled="!romanButtonStates.V">V</button>
+        <button @click="addRomanNumeral('VI')" class="roman-btn" :disabled="!romanButtonStates.VI">VI</button>
+        <button @click="addToExpression('+')" class="operator-btn">+</button>
+      </div>
+      
+      <div class="button-row roman-numerals-row">
+        <button @click="addRomanNumeral('I')" class="roman-btn" :disabled="!romanButtonStates.I">I</button>
+        <button @click="addRomanNumeral('II')" class="roman-btn" :disabled="!romanButtonStates.II">II</button>
+        <button @click="addRomanNumeral('III')" class="roman-btn" :disabled="!romanButtonStates.III">III</button>
+        <button @click="addToExpression('-')" class="operator-btn">−</button>
         </div>
         
         <!-- Final operators and compute button -->
         <div class="button-row operator-row">
+          <button @click="addToExpression('^')" class="operator-btn">^</button>
           <button @click="addToExpression('*')" class="operator-btn">×</button>
           <button @click="addToExpression('/')" class="operator-btn">÷</button>
+        </div>
+        <div class="button-row calculare-row">
           <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
         </div>
+      </div>
     </div>
-  </div>
-</template>
+  </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -588,7 +588,7 @@ export default {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 2px solid #4A6741;
-  min-height: 80px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -687,11 +687,15 @@ export default {
 }
 
 .button-row.operator-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.button-row.calculare-row {
   grid-template-columns: 1fr 1fr 2fr;
 }
 
 .operator-btn {
-  background: #4A6741;
+  background: #d18c00;
   color: white;
   border: none;
   border-radius: 6px;
