@@ -13,9 +13,8 @@ A minimalist calculator application with a Latin interface and Roman numeral dis
 
 ## Demo
 
-🚀 **Live Demo**: [https://your-username.github.io/calculatrix-romana/](https://your-username.github.io/calculatrix-romana/)
+🚀 **Live Demo**: [https://dustinrjo.github.io/calculatrix-romana/](https://dustinrjo.github.io/calculatrix-romana/)
 
-*Replace `your-username` with your actual GitHub username once deployed*
 
 ## Technical Details
 
@@ -43,7 +42,7 @@ The application supports Roman numerals up to 399,999 using standard notation in
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/calculatrix-romana.git
+git clone https://github.com/dustinrjo/calculatrix-romana.git
 cd calculatrix-romana
 ```
 
