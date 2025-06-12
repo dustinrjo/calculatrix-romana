@@ -10,7 +10,7 @@
         {{ previousCalculation }}
       </div>
       <div class="display-screen">
-        {{ displayValue || 'NIHIL' }}
+        {{ displayValue || 'nihil' }}
       </div>
       <div class="validation-indicator" :class="{ valid: isValidExpression, invalid: currentExpression && !isValidExpression }">
         <span v-if="isValidExpression">✓</span>
@@ -28,22 +28,55 @@
       class="hidden-input"
       autocomplete="off"
       autofocus
-    />
-
-    <div class="calculator-buttons">
-      <div class="button-row">
-        <button @click="clearAll" class="clear-all-btn">AC</button>
-        <button @click="clearCurrent" class="clear-btn">C</button>
-        <button @click="addToExpression('^')" class="operator-btn">^</button>
-        <button @click="addToExpression('/')" class="operator-btn">÷</button>
-      </div>
+      />
       
-      <div class="button-row">
-        <button @click="addToExpression('*')" class="operator-btn">×</button>
-        <button @click="addToExpression('-')" class="operator-btn">−</button>
-        <button @click="addToExpression('+')" class="operator-btn">+</button>
-        <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
-      </div>
+      <div class="calculator-buttons">
+        <!-- Control and Operator Buttons -->
+        <div class="button-row control-row">
+          <button @click="clearAll" class="clear-all-btn">AC</button>
+          <button @click="clearCurrent" class="clear-btn">C</button>
+          <button @click="copyToClipboard" class="copy-btn" :disabled="!canCopy" title="Copia ad Clipboard">
+            📋 Copia
+          </button>
+          <button @click="addToExpression('^')" class="operator-btn">^</button>
+        </div>
+        
+        <!-- Large Roman Numerals -->
+        <div class="button-row roman-numerals-row">
+          <button @click="addRomanNumeral('M')" class="roman-btn" :disabled="!romanButtonStates.M">M</button>
+          <button @click="addRomanNumeral('D')" class="roman-btn" :disabled="!romanButtonStates.D">D</button>
+          <button @click="addRomanNumeral('C')" class="roman-btn" :disabled="!romanButtonStates.C">C</button>
+          <button @click="addRomanNumeral('L')" class="roman-btn" :disabled="!romanButtonStates.L">L</button>
+        </div>
+        
+        <!-- Ten to One Roman Numerals -->
+        <div class="button-row roman-numerals-row">
+          <button @click="addRomanNumeral('VII')" class="roman-btn" :disabled="!romanButtonStates.VII">VII</button>
+          <button @click="addRomanNumeral('VIII')" class="roman-btn" :disabled="!romanButtonStates.VIII">VIII</button>
+          <button @click="addRomanNumeral('IX')" class="roman-btn" :disabled="!romanButtonStates.IX">IX</button>
+          <button @click="addRomanNumeral('X')" class="roman-btn" :disabled="!romanButtonStates.X">X</button>
+        </div>
+        
+        <div class="button-row roman-numerals-row">
+          <button @click="addRomanNumeral('IV')" class="roman-btn" :disabled="!romanButtonStates.IV">IV</button>
+          <button @click="addRomanNumeral('V')" class="roman-btn" :disabled="!romanButtonStates.V">V</button>
+          <button @click="addRomanNumeral('VI')" class="roman-btn" :disabled="!romanButtonStates.VI">VI</button>
+          <button @click="addToExpression('+')" class="operator-btn">+</button>
+        </div>
+        
+        <div class="button-row roman-numerals-row">
+          <button @click="addRomanNumeral('I')" class="roman-btn" :disabled="!romanButtonStates.I">I</button>
+          <button @click="addRomanNumeral('II')" class="roman-btn" :disabled="!romanButtonStates.II">II</button>
+          <button @click="addRomanNumeral('III')" class="roman-btn" :disabled="!romanButtonStates.III">III</button>
+          <button @click="addToExpression('-')" class="operator-btn">−</button>
+        </div>
+        
+        <!-- Final operators and compute button -->
+        <div class="button-row operator-row">
+          <button @click="addToExpression('*')" class="operator-btn">×</button>
+          <button @click="addToExpression('/')" class="operator-btn">÷</button>
+          <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
+        </div>
     </div>
   </div>
 </template>
@@ -52,7 +85,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { roundToTwelfths, toRomanFraction } from '../utils/romanFractions.js'
 import { parseExpression, isValidExpression as validateExpression } from '../utils/expressionParser.js'
-import { parseMixedInput, parseForKeyboard, isRomanChar } from '../utils/romanInput.js'
+import { parseMixedInput, parseForKeyboard, isRomanChar, canAddRomanChar, getCurrentBuildingSequence, getValidNextRomanChars, canAddRomanNumeral } from '../utils/romanInput.js'
 import CalculationHistory from './CalculationHistory.vue'
 
 export default {
@@ -115,9 +148,31 @@ export default {
     const updateDisplay = (event) => {
       if (event && event.target) {
         const value = event.target.value
+        const oldValue = currentExpression.value
         
         // Filter input to allow numbers, operators, decimal points, and Roman numeral characters
-        const filteredValue = value.replace(/[^0-9+\-*/^.IVXLCDM]/gi, '')
+        let filteredValue = value.replace(/[^0-9+\-*/^.IVXLCDM]/gi, '')
+        
+        // Additional validation for Roman numeral sequences
+        if (filteredValue.length > oldValue.length) {
+          // User is adding characters - validate Roman numeral input
+          const newChar = filteredValue[filteredValue.length - 1]
+          if (isRomanChar(newChar)) {
+            try {
+              if (!canAddRomanChar(oldValue, newChar)) {
+                // Invalid Roman character for current sequence - reject it
+                filteredValue = oldValue
+                if (event.target) {
+                  event.target.value = oldValue
+                }
+                return
+              }
+            } catch (error) {
+              console.error('Error validating Roman character:', error)
+              // If validation fails, allow the character to avoid freezing
+            }
+          }
+        }
         
         // Convert mixed Roman/Arabic input - preserve trailing sequences for building
         const convertedValue = parseForKeyboard(filteredValue)
@@ -191,6 +246,10 @@ export default {
       // If we just calculated, start chaining with the last result
       if (justCalculated.value && lastResult.value !== null) {
         currentExpression.value = lastResult.value + actualOperator
+        // Also update the hidden input field
+        if (expressionInput.value) {
+          expressionInput.value.value = lastResult.value + actualOperator
+        }
         justCalculated.value = false
         focusExpressionInput()
         return
@@ -205,11 +264,158 @@ export default {
       // Replace last operator if last character is an operator
       if (expression && /[+\-*/^]/.test(lastChar)) {
         currentExpression.value = expression.slice(0, -1) + actualOperator
+        // Also update the hidden input field
+        if (expressionInput.value) {
+          expressionInput.value.value = expression.slice(0, -1) + actualOperator
+        }
       } else {
         currentExpression.value = expression + actualOperator
+        // Also update the hidden input field
+        if (expressionInput.value) {
+          expressionInput.value.value = expression + actualOperator
+        }
       }
       
       focusExpressionInput()
+    }
+
+    const addRomanNumeral = (roman) => {
+      try {
+        // Check if this Roman numeral is valid for the current sequence
+        if (!justCalculated.value && !canAddRomanNumeral(currentExpression.value, roman)) {
+          return // Don't add invalid numerals
+        }
+
+        // If we just calculated, start fresh with the Roman numeral
+        if (justCalculated.value) {
+          currentExpression.value = roman
+          if (expressionInput.value) {
+            expressionInput.value.value = roman
+          }
+          lastResult.value = null
+          previousCalculation.value = ''
+          justCalculated.value = false
+          focusExpressionInput()
+          return
+        }
+        
+        // Add Roman numeral to current expression
+        currentExpression.value += roman
+        if (expressionInput.value) {
+          expressionInput.value.value += roman
+        }
+        
+        focusExpressionInput()
+      } catch (error) {
+        console.error('Error adding Roman numeral:', error)
+        // If there's an error, just add the numeral without validation to avoid freezing
+        if (justCalculated.value) {
+          currentExpression.value = roman
+          if (expressionInput.value) {
+            expressionInput.value.value = roman
+          }
+          lastResult.value = null
+          previousCalculation.value = ''
+          justCalculated.value = false
+        } else {
+          currentExpression.value += roman
+          if (expressionInput.value) {
+            expressionInput.value.value += roman
+          }
+        }
+        focusExpressionInput()
+      }
+    }
+
+    // Check if copy is available (result or input without operators)
+    const canCopy = computed(() => {
+      // Can copy if we just calculated (have a result)
+      if (justCalculated.value && lastResult.value !== null) {
+        return true
+      }
+      
+      // Can copy if we have input without operators (just a number/roman numeral)
+      if (currentExpression.value && !/[+\-*/^]/.test(currentExpression.value)) {
+        return true
+      }
+      
+      return false
+    })
+
+    // Roman button states - determine which buttons should be enabled
+    const romanButtonStates = computed(() => {
+      try {
+        const currentSequence = getCurrentBuildingSequence(currentExpression.value)
+        
+        // Check if we can add each Roman numeral (single or multi-character)
+        const canAdd = (romanNumeral) => {
+          return canAddRomanNumeral(currentExpression.value, romanNumeral)
+        }
+        
+        return {
+          M: canAdd('M'),
+          D: canAdd('D'),
+          C: canAdd('C'),
+          L: canAdd('L'),
+          X: canAdd('X'),
+          IX: canAdd('IX'),
+          VIII: canAdd('VIII'),
+          VII: canAdd('VII'),
+          VI: canAdd('VI'),
+          V: canAdd('V'),
+          IV: canAdd('IV'),
+          III: canAdd('III'),
+          II: canAdd('II'),
+          I: canAdd('I')
+        }
+      } catch (error) {
+        console.error('Error computing roman button states:', error)
+        // Fallback: enable all buttons if there's an error
+        return {
+          M: true, D: true, C: true, L: true, X: true, IX: true, 
+          VIII: true, VII: true, VI: true, V: true, IV: true, 
+          III: true, II: true, I: true
+        }
+      }
+    })
+
+    const copyToClipboard = async () => {
+      if (!canCopy.value) return
+      
+      let textToCopy = ''
+      
+      // If we just calculated, copy the result in Roman numerals
+      if (justCalculated.value && lastResult.value !== null) {
+        const rounded = roundToTwelfths(lastResult.value)
+        const sign = lastResult.value < 0 ? '-' : ''
+        textToCopy = sign + toRomanFraction(Math.abs(rounded))
+      } else if (currentExpression.value && !/[+\-*/^]/.test(currentExpression.value)) {
+        // Copy the current display value (already in Roman numerals)
+        textToCopy = displayValue.value
+      }
+      
+      if (textToCopy) {
+        try {
+          await navigator.clipboard.writeText(textToCopy)
+          // Could show a brief success message here
+          console.log('Copied to clipboard:', textToCopy)
+        } catch (err) {
+          console.error('Failed to copy: ', err)
+          // Fallback for older browsers
+          try {
+            const textArea = document.createElement('textarea')
+            textArea.value = textToCopy
+            document.body.appendChild(textArea)
+            textArea.focus()
+            textArea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textArea)
+            console.log('Copied to clipboard (fallback):', textToCopy)
+          } catch (fallbackErr) {
+            console.error('Fallback copy failed: ', fallbackErr)
+          }
+        }
+      }
     }
 
     const calculate = () => {
@@ -345,6 +551,10 @@ export default {
       previousCalculation,
       updateDisplay,
       addToExpression,
+      addRomanNumeral,
+      canCopy,
+      copyToClipboard,
+      romanButtonStates,
       calculate,
       clearCurrent,
       clearAll,
@@ -400,11 +610,12 @@ export default {
   color: #fff;
   font-size: 1.8rem;
   font-family: 'JetBrains Mono', monospace;
-  text-align: center;
+  text-align: right;
   word-break: break-all;
   line-height: 1.2;
   max-width: 100%;
   flex: 1;
+  padding-right: 0.5rem;
 }
 
 .hidden-input {
@@ -465,6 +676,18 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
+}
+
+.button-row.control-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.button-row.roman-numerals-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.button-row.operator-row {
+  grid-template-columns: 1fr 1fr 2fr;
 }
 
 .operator-btn {
@@ -545,11 +768,77 @@ export default {
 
 .equals-btn:disabled {
   background: #6c757d;
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.6;
 }
 
 .equals-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.roman-btn {
+  background: #2D4A22;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.roman-btn:hover {
+  background: #3a5a2a;
+  transform: translateY(-1px);
+}
+
+.roman-btn:active {
+  transform: translateY(0);
+}
+
+.roman-btn:disabled {
+  /* background: #6c757d; */
+  cursor: default;
+  opacity: 0.9;
+  transform: none;
+}
+
+.roman-btn:disabled:hover {
+  background: #6c757d;
+  transform: none;
+}
+
+.copy-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.copy-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.copy-btn:active:not(:disabled) {
   transform: translateY(0);
 }
 
@@ -575,9 +864,24 @@ export default {
   .operator-btn, 
   .clear-all-btn, 
   .clear-btn, 
-  .equals-btn {
+  .equals-btn,
+  .copy-btn {
     padding: 0.75rem;
     font-size: 1rem;
+  }
+  
+  .roman-btn {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .button-row.roman-numerals-row {
+    gap: 0.25rem;
+  }
+  
+  .button-row.control-row,
+  .button-row.operator-row {
+    gap: 0.5rem;
   }
 }
 </style> 

@@ -7,7 +7,10 @@ import {
   parseForKeyboard,
   processRomanInput,
   getCurrentRomanSequence,
-  hasIncompleteRomanSequence
+  hasIncompleteRomanSequence,
+  getValidNextRomanChars,
+  canAddRomanChar,
+  getCurrentBuildingSequence
 } from './romanInput.js'
 
 describe('Roman Input Parser', () => {
@@ -218,6 +221,67 @@ describe('Roman Input Parser', () => {
     it('should handle no Roman sequence', () => {
       expect(hasIncompleteRomanSequence('123')).toBe(false)
       expect(hasIncompleteRomanSequence('12+5')).toBe(false)
+    })
+  })
+})
+
+describe('Roman numeral validation', () => {
+  describe('getValidNextRomanChars', () => {
+    it('allows all characters for empty sequence', () => {
+      const valid = getValidNextRomanChars('')
+      expect(valid).toEqual(['M', 'D', 'C', 'L', 'X', 'V', 'I'])
+    })
+
+    it('handles simple valid sequences', () => {
+      expect(getValidNextRomanChars('I')).toContain('V') // IV is valid
+      expect(getValidNextRomanChars('I')).toContain('X') // IX is valid
+      expect(getValidNextRomanChars('I')).toContain('I') // II is valid
+      expect(getValidNextRomanChars('V')).toContain('I') // VI is valid
+    })
+
+    it('prevents invalid sequences', () => {
+      expect(getValidNextRomanChars('XIV')).not.toContain('I') // XIVI is invalid
+      expect(getValidNextRomanChars('VV')).toEqual([]) // VV + anything is invalid
+      expect(getValidNextRomanChars('LL')).toEqual([]) // LL + anything is invalid
+    })
+
+    it('handles subtractive notation correctly', () => {
+      expect(getValidNextRomanChars('IV')).not.toContain('I') // IVI is invalid
+      expect(getValidNextRomanChars('IX')).not.toContain('I') // IXI is invalid
+      expect(getValidNextRomanChars('XL')).not.toContain('X') // XLX is invalid
+    })
+  })
+
+  describe('canAddRomanChar', () => {
+    it('works with mixed input', () => {
+      expect(canAddRomanChar('5+X', 'I')).toBe(true) // 5+XI is valid
+      expect(canAddRomanChar('5+XIV', 'I')).toBe(false) // 5+XIVI is invalid
+      expect(canAddRomanChar('10*V', 'I')).toBe(true) // 10*VI is valid
+    })
+
+    it('handles empty input', () => {
+      expect(canAddRomanChar('', 'M')).toBe(true)
+      expect(canAddRomanChar('', 'I')).toBe(true)
+    })
+
+    it('works with pure Roman sequences', () => {
+      expect(canAddRomanChar('X', 'I')).toBe(true) // XI is valid
+      expect(canAddRomanChar('XIV', 'I')).toBe(false) // XIVI is invalid
+    })
+  })
+
+  describe('getCurrentBuildingSequence', () => {
+    it('extracts current Roman sequence from mixed input', () => {
+      expect(getCurrentBuildingSequence('5+XIV')).toBe('XIV')
+      expect(getCurrentBuildingSequence('100*M')).toBe('M')
+      expect(getCurrentBuildingSequence('50+')).toBe('')
+      expect(getCurrentBuildingSequence('MC')).toBe('MC')
+    })
+
+    it('handles transitions between types', () => {
+      expect(getCurrentBuildingSequence('XIV5')).toBe('5')
+      expect(getCurrentBuildingSequence('5XIV')).toBe('XIV')
+      expect(getCurrentBuildingSequence('XIV+')).toBe('')
     })
   })
 }) 
