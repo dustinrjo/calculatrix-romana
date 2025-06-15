@@ -36,6 +36,7 @@
         <button @click="clearAll" class="clear-all-btn">AC</button>
         <button @click="clearCurrent" class="clear-btn">C</button>
         <button @click="copyToClipboard" class="copy-btn" :disabled="!canCopy" title="Copia ad Clipboard">📋 Copia</button>
+        <button @click="addToExpression('^')" class="operator-btn">^</button>
       </div>
       
       <!-- Large Roman Numerals -->
@@ -69,14 +70,13 @@
         </div>
         
         <!-- Final operators and compute button -->
-        <div class="button-row operator-row">
-          <button @click="addToExpression('^')" class="operator-btn">^</button>
+        
+        <div class="button-row calculare-row">
           <button @click="addToExpression('*')" class="operator-btn">×</button>
           <button @click="addToExpression('/')" class="operator-btn">÷</button>
-        </div>
-        <div class="button-row calculare-row">
           <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
         </div>
+        
       </div>
     </div>
   </template>
