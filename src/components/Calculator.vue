@@ -1,11 +1,11 @@
 <template>
   <div class="calculator">
-    <h1 class="title">Calculatrix Romana</h1>
+    <h1 class="calculator-header">Calculatrix Romana</h1>
     
     <!-- <CalculationHistory :history="calculationHistory" /> -->
     
     <!-- Calculator Display (clickable to focus input) -->
-    <div class="calculator-display" @click="focusExpressionInput">
+    <div class="display" @click="focusExpressionInput">
       <div class="previous-calculation" v-if="previousCalculation">
         {{ previousCalculation }}
       </div>
@@ -20,80 +20,65 @@
     
     <!-- Hidden Expression Input -->
     <input 
-    ref="expressionInput"
-    @input="updateDisplay"
-    @keydown="handleKeyDown"
-    @blur="refocusAfterDelay"
-    type="text"
-    class="hidden-input"
-    autocomplete="off"
-    autofocus
+      ref="expressionInput"
+      @input="updateDisplay"
+      @keydown="handleKeyDown"
+      @blur="refocusAfterDelay"
+      type="text"
+      class="hidden-input"
+      autocomplete="off"
+      autofocus
     />
-    
-    <div class="calculator-buttons">
-      <!-- Control and Operator Buttons -->
+
+    <div class="button-grid">
+      <!-- Top control row: AC, C, Copia, ^ -->
       <div class="button-row control-row">
-        <button @click="clearAll" class="clear-all-btn">AC</button>
-        <button @click="clearCurrent" class="clear-btn">C</button>
-        <button @click="copyToClipboard" class="copy-btn" :disabled="!canCopy" title="Copia ad Clipboard">📋 Copia</button>
-        <button @click="addToExpression('^')" class="operator-btn">^</button>
+        <button class="ac-btn control-btn" @click="clearAll">AC</button>
+        <button class="c-btn control-btn" @click="clearCurrent">C</button>
+        <button class="copia-btn control-btn" @click="copyToClipboard" :disabled="!canCopy">Copia</button>
+        <button class="operator-btn control-btn" @click="addToExpression('^')">^</button>
       </div>
-      
-      <!-- Large Roman Numerals -->
+
+      <!-- Roman and operator buttons -->
       <div class="button-row roman-numerals-row">
-        <button @click="addRomanNumeral('M')" class="roman-btn" :disabled="!romanButtonStates.M">M</button>
-        <button @click="addRomanNumeral('D')" class="roman-btn" :disabled="!romanButtonStates.D">D</button>
-        <button @click="addRomanNumeral('C')" class="roman-btn" :disabled="!romanButtonStates.C">C</button>
-        <button @click="addRomanNumeral('L')" class="roman-btn" :disabled="!romanButtonStates.L">L</button>
+        <button class="roman-btn" @click="addRomanNumeral('M')" :disabled="!romanButtonStates.M">M</button>
+        <button class="roman-btn" @click="addRomanNumeral('D')" :disabled="!romanButtonStates.D">D</button>
+        <button class="roman-btn" @click="addRomanNumeral('C')" :disabled="!romanButtonStates.C">C</button>
+        <button class="roman-btn" @click="addRomanNumeral('L')" :disabled="!romanButtonStates.L">L</button>
       </div>
-      
-      <!-- Ten to One Roman Numerals -->
       <div class="button-row roman-numerals-row">
-        <button @click="addRomanNumeral('VII')" class="roman-btn" :disabled="!romanButtonStates.VII">VII</button>
-        <button @click="addRomanNumeral('VIII')" class="roman-btn" :disabled="!romanButtonStates.VIII">VIII</button>
-        <button @click="addRomanNumeral('IX')" class="roman-btn" :disabled="!romanButtonStates.IX">IX</button>
-        <button @click="addRomanNumeral('X')" class="roman-btn" :disabled="!romanButtonStates.X">X</button>
+        <button class="roman-btn" @click="addRomanNumeral('VII')" :disabled="!romanButtonStates.VII">VII</button>
+        <button class="roman-btn" @click="addRomanNumeral('VIII')" :disabled="!romanButtonStates.VIII">VIII</button>
+        <button class="roman-btn" @click="addRomanNumeral('IX')" :disabled="!romanButtonStates.IX">IX</button>
+        <button class="roman-btn" @click="addRomanNumeral('X')" :disabled="!romanButtonStates.X">X</button>
       </div>
-      
       <div class="button-row roman-numerals-row">
-        <button @click="addRomanNumeral('IV')" class="roman-btn" :disabled="!romanButtonStates.IV">IV</button>
-        <button @click="addRomanNumeral('V')" class="roman-btn" :disabled="!romanButtonStates.V">V</button>
-        <button @click="addRomanNumeral('VI')" class="roman-btn" :disabled="!romanButtonStates.VI">VI</button>
-        <button @click="addToExpression('+')" class="operator-btn">+</button>
+        <button class="roman-btn" @click="addRomanNumeral('IV')" :disabled="!romanButtonStates.IV">IV</button>
+        <button class="roman-btn" @click="addRomanNumeral('V')" :disabled="!romanButtonStates.V">V</button>
+        <button class="roman-btn" @click="addRomanNumeral('VI')" :disabled="!romanButtonStates.VI">VI</button>
+        <button class="operator-btn" @click="addToExpression('+')">+</button>
       </div>
-      
       <div class="button-row roman-numerals-row">
-        <button @click="addRomanNumeral('I')" class="roman-btn" :disabled="!romanButtonStates.I">I</button>
-        <button @click="addRomanNumeral('II')" class="roman-btn" :disabled="!romanButtonStates.II">II</button>
-        <button @click="addRomanNumeral('III')" class="roman-btn" :disabled="!romanButtonStates.III">III</button>
-        <button @click="addToExpression('-')" class="operator-btn">−</button>
-        </div>
-        
-        <!-- Final operators and compute button -->
-        
-        <div class="button-row calculare-row">
-          <button @click="addToExpression('*')" class="operator-btn">×</button>
-          <button @click="addToExpression('/')" class="operator-btn">÷</button>
-          <button @click="calculate" class="equals-btn" :disabled="!isValidExpression">Computare</button>
-        </div>
-        
+        <button class="roman-btn" @click="addRomanNumeral('I')" :disabled="!romanButtonStates.I">I</button>
+        <button class="roman-btn" @click="addRomanNumeral('II')" :disabled="!romanButtonStates.II">II</button>
+        <button class="roman-btn" @click="addRomanNumeral('III')" :disabled="!romanButtonStates.III">III</button>
+        <button class="operator-btn" @click="addToExpression('-')">−</button>
+      </div>
+      <!-- Operator row: *, /, Computare (2 columns) -->
+      <div class="button-row operator-row">
+        <button class="operator-btn" @click="addToExpression('*')">×</button>
+        <button class="operator-btn" @click="addToExpression('/')">÷</button>
+        <button class="computare-btn" @click="calculate" :disabled="!isValidExpression" style="grid-column: span 2;">Computare</button>
       </div>
     </div>
-  </template>
+  </div>
+</template>
 
-<script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
 import { roundToTwelfths, toRomanFraction } from '../utils/romanFractions.js'
 import { parseExpression, isValidExpression as validateExpression } from '../utils/expressionParser.js'
 import { parseMixedInput, parseForKeyboard, isRomanChar, canAddRomanChar, getCurrentBuildingSequence, getValidNextRomanChars, canAddRomanNumeral } from '../utils/romanInput.js'
-import CalculationHistory from './CalculationHistory.vue'
-
-export default {
-  name: 'Calculator',
-  components: {
-    CalculationHistory
-  },
-  setup() {
     // Calculator state
     const currentExpression = ref('')
     const calculationHistory = ref([])
@@ -397,7 +382,6 @@ export default {
       if (textToCopy) {
         try {
           await navigator.clipboard.writeText(textToCopy)
-          // Could show a brief success message here
           console.log('Copied to clipboard:', textToCopy)
         } catch (err) {
           console.error('Failed to copy: ', err)
@@ -457,7 +441,6 @@ export default {
         }
       } catch (error) {
         console.error('Calculation error:', error)
-        // Could show error message to user here
       }
     }
 
@@ -537,57 +520,46 @@ export default {
       }
     }
 
-    // Auto-focus on mount
-    onMounted(() => {
-      focusExpressionInput()
-    })
-
-    return {
-      currentExpression,
-      calculationHistory,
-      expressionInput,
-      displayValue,
-      isValidExpression,
-      previousCalculation,
-      updateDisplay,
-      addToExpression,
-      addRomanNumeral,
-      canCopy,
-      copyToClipboard,
-      romanButtonStates,
-      calculate,
-      clearCurrent,
-      clearAll,
-      handleKeyDown,
-      focusExpressionInput,
-      refocusAfterDelay
-    }
-  }
-}
+// Auto-focus on mount
+onMounted(() => {
+  focusExpressionInput()
+})
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=UnifrakturMaguntia&display=swap');
+
+body {
+  background: #fff;
+}
+
 .calculator {
-  max-width: 600px;
-  margin: 0 auto;
+  background: #f8f5e3;
+  border: 2.5px solid #000;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   padding: 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
+  max-width: 400px;
+  margin: 2rem auto;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #2d1812;
 }
 
-.title {
+.calculator-header {
   text-align: center;
-  font-size: 2rem;
   margin-bottom: 1.5rem;
-  color: #2D4A22;
-  font-weight: 700;
+  color: #2d1812;
+  font-family: 'UnifrakturMaguntia', 'Times New Roman', serif;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
 }
 
-.calculator-display {
+.display {
   background: #1a1a1a;
+  border: 2.5px solid #000;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1rem;
   margin-bottom: 1.5rem;
-  border: 2px solid #4A6741;
   min-height: 100px;
   display: flex;
   align-items: center;
@@ -597,19 +569,19 @@ export default {
   transition: border-color 0.2s;
 }
 
-.calculator-display:hover {
+.display:hover {
   border-color: #5a7751;
 }
 
-.calculator-display:focus-within {
+.display:focus-within {
   border-color: #2D4A22;
   box-shadow: 0 0 8px rgba(45, 74, 34, 0.3);
 }
 
 .display-screen {
-  color: #fff;
+  color: #f8f5e3;
   font-size: 1.8rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   text-align: right;
   word-break: break-all;
   line-height: 1.2;
@@ -627,7 +599,7 @@ export default {
   pointer-events: none;
 }
 
-.calculator-display .validation-indicator {
+.display .validation-indicator {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
@@ -641,12 +613,12 @@ export default {
   font-weight: bold;
 }
 
-.calculator-display .validation-indicator.valid {
+.display .validation-indicator.valid {
   background: #28a745;
   color: white;
 }
 
-.calculator-display .validation-indicator.invalid {
+.display .validation-indicator.invalid {
   background: #dc3545;
   color: white;
 }
@@ -656,236 +628,191 @@ export default {
   top: 0.5rem;
   left: 0.75rem;
   font-size: 0.8rem;
-  color: #888;
-  font-family: 'JetBrains Mono', monospace;
+  color: #e6e0c3;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   max-width: calc(100% - 3rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-
-
-.calculator-buttons {
-  display: flex;
-  flex-direction: column;
+.button-grid {
+  display: grid;
   gap: 1rem;
 }
 
 .button-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-}
-
-.button-row.control-row {
-  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
 }
 
 .button-row.roman-numerals-row {
   grid-template-columns: repeat(4, 1fr);
 }
 
-.button-row.operator-row {
+.button-row.control-row {
   grid-template-columns: repeat(4, 1fr);
+  gap: 0.7rem;
 }
 
-.button-row.calculare-row {
+.button-row.control-row .control-btn {
+  font-size: 0.95rem;
+  padding: 0.6rem 0.2rem;
+}
+
+.button-row.operator-row {
   grid-template-columns: 1fr 1fr 2fr;
+  gap: 1rem;
 }
 
-.operator-btn {
-  background: #d18c00;
-  color: white;
-  border: none;
+.button-row.computare-row {
+  grid-template-columns: 1fr;
+  margin-top: 1rem;
+}
+
+button {
+  background: #2d1812;
+  color: #f8f5e3;
+  border: 2.5px solid #000;
   border-radius: 6px;
-  padding: 1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
+  transition: box-shadow 0.1s, transform 0.1s, background 0.15s;
+  position: relative;
+  box-shadow: 0 4px 0 #000, 0 6px 12px rgba(0,0,0,0.18);
+  margin: 0.3rem;
+  padding: 0.85rem 0.6rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-.operator-btn:hover {
-  background: #5a7751;
-  transform: translateY(-1px);
+button:active {
+  box-shadow: 0 1px 0 #000, 0 2px 4px rgba(0,0,0,0.18) inset;
+  background: #1a0e0a;
+  transform: translateY(2px);
 }
 
-.operator-btn:active {
-  transform: translateY(0);
+button:hover:not(:disabled) {
+  background: #3a211a;
+  border-color: #000;
 }
 
-.clear-all-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
+button:disabled {
+  background: #bdbdbd;
+  border-color: #888;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
-.clear-all-btn:hover {
-  background: #c82333;
-  transform: translateY(-1px);
+.ac-btn {
+  background: #e53935;
+  color: #fff;
+  font-weight: bold;
+  border: 2.5px solid #b71c1c;
+  font-family: 'UnifrakturMaguntia', 'Times New Roman', serif;
 }
 
-.clear-btn {
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
+.c-btn {
+  background: #757575;
+  color: #fff;
+  font-weight: bold;
+  border: 2.5px solid #424242;
+  font-family: 'UnifrakturMaguntia', 'Times New Roman', serif;
 }
 
-.clear-btn:hover {
-  background: #5a6268;
-  transform: translateY(-1px);
+.copia-btn {
+  background: #00acc1;
+  color: #fff;
+  font-weight: bold;
+  border: 2.5px solid #006064;
+  font-family: 'UnifrakturMaguntia', 'Times New Roman', serif;
 }
 
-.equals-btn {
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.equals-btn:hover:not(:disabled) {
-  background: #218838;
-  transform: translateY(-1px);
-}
-
-.equals-btn:disabled {
-  background: #6c757d;
-  cursor: default;
-  opacity: 0.6;
-}
-
-.equals-btn:active:not(:disabled) {
-  transform: translateY(0);
+.copia-btn:disabled {
+  background: #bdbdbd;
+  border-color: #888;
+  color: #888;
 }
 
 .roman-btn {
-  background: #2D4A22;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0.75rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Times New Roman', serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  background: #264d1a;
+  color: #f8f5e3;
 }
 
-.roman-btn:hover {
-  background: #3a5a2a;
-  transform: translateY(-1px);
+.operator-btn {
+  background: #e09c1b;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.3rem;
+  border: 2.5px solid #b77c0c;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-.roman-btn:active {
-  transform: translateY(0);
+.operator-btn:hover:not(:disabled) {
+  background: #f2b84b;
+  border-color: #b77c0c;
 }
 
-.roman-btn:disabled {
-  /* background: #6c757d; */
-  cursor: default;
-  opacity: 0.9;
-  transform: none;
+.computare-btn {
+  background: #757575;
+  color: #fff;
+  font-weight: bold;
+  border: 2.5px solid #424242;
+  font-size: 1.2rem;
+  width: 100%;
+  margin: 0.3rem 0 0 0;
+  padding: 1rem 0;
+  font-family: 'UnifrakturMaguntia', 'Times New Roman', serif;
 }
 
-.roman-btn:disabled:hover {
-  background: #6c757d;
-  transform: none;
+.computare-btn:disabled {
+  background: #bdbdbd;
+  border-color: #888;
+  color: #888;
 }
 
-.copy-btn {
-  background: #17a2b8;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', monospace;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.copy-btn:hover:not(:disabled) {
-  background: #138496;
-  transform: translateY(-1px);
-}
-
-.copy-btn:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.copy-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .calculator {
+    margin: 1rem;
     padding: 1rem;
-    max-width: 100%;
   }
-  
-  .title {
+  .calculator-header {
     font-size: 1.5rem;
+    margin-bottom: 1rem;
   }
-  
-  .display-screen {
-    font-size: 1.4rem;
-  }
-  
-  .button-row {
-    gap: 0.5rem;
-  }
-  
-  .operator-btn, 
-  .clear-all-btn, 
-  .clear-btn, 
-  .equals-btn,
-  .copy-btn {
+  .display {
+    font-size: 1.2rem;
     padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .button-grid {
+    gap: 0.7rem;
+  }
+  .button-row {
+    gap: 0.7rem;
+  }
+  button {
+    padding: 0.6rem;
     font-size: 1rem;
   }
-  
   .roman-btn {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
+    padding: 0.6rem 0.4rem;
   }
-  
-  .button-row.roman-numerals-row {
-    gap: 0.25rem;
+  .operator-btn {
+    font-size: 1.2rem;
   }
-  
-  .button-row.control-row,
-  .button-row.operator-row {
-    gap: 0.5rem;
+  .computare-btn {
+    font-size: 1.1rem;
+    padding: 0.8rem 0;
+  }
+  .button-row.control-row .control-btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.1rem;
   }
 }
 </style> 
