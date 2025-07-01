@@ -68,7 +68,7 @@
       <div class="button-row operator-row">
         <button class="operator-btn" @click="addToExpression('*')">×</button>
         <button class="operator-btn" @click="addToExpression('/')">÷</button>
-        <button class="computare-btn" @click="calculate" :disabled="!isValidExpression" style="grid-column: span 2;">Computare</button>
+        <button class="computare-btn" @click="calculate" :disabled="!isValidExpression">Computare</button>
       </div>
     </div>
   </div>
